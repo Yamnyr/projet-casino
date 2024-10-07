@@ -23,10 +23,14 @@ cursor.execute('''
         victoires INTEGER DEFAULT 0,
         defaites INTEGER DEFAULT 0,
         argent_total_gagne INTEGER DEFAULT 0,
-        argent_total_perdu INTEGER DEFAULT 0
+        argent_total_perdu INTEGER DEFAULT 0,
+        gain_max INTEGER DEFAULT 0
     )
 ''')
 conn.commit()
+
+
+
 
 def enregistrer_score(name_user, level, dernier_level, solde):
     try:
@@ -55,10 +59,13 @@ def enregistrer_score(name_user, level, dernier_level, solde):
 def mise_a_jour_statistiques(name_user, victoire, gain, perte):
     try:
         # Récupération des statistiques actuelles
-        cursor.execute("SELECT parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu FROM utilisateurs WHERE pseudo = ?", (name_user,))
+        cursor.execute("SELECT parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, gain_max FROM utilisateurs WHERE pseudo = ?", (name_user,))
         stats = cursor.fetchone()
 
         if stats:
+            if stats[5] > gain:
+               gain_max = gain
+
             parties_jouees = stats[0] + 1
             victoires = stats[1] + 1 if victoire else stats[1]
             defaites = stats[2] + 1 if not victoire else stats[2]
@@ -67,9 +74,9 @@ def mise_a_jour_statistiques(name_user, victoire, gain, perte):
 
             cursor.execute('''
                 UPDATE utilisateurs
-                SET parties_jouees = ?, victoires = ?, defaites = ?, argent_total_gagne = ?, argent_total_perdu = ?
+                SET parties_jouees = ?, victoires = ?, defaites = ?, argent_total_gagne = ?, argent_total_perdu = ?, gain_max = ?
                 WHERE pseudo = ?
-            ''', (parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, name_user))
+            ''', (parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, gain_max, name_user))
         conn.commit()
     except Exception as e:
         print(f"Erreur lors de la mise à jour des statistiques : {e}")
@@ -99,42 +106,50 @@ def demande_saisie():
 
 def afficher_statistiques(name_user):
     try:
-        cursor.execute('''
-            SELECT parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu,
-                   MAX(argent_total_gagne) AS meilleur_gain,
-                   MAX(argent_total_perdu) AS pire_perte,
-                   AVG(argent_total_gagne) AS moyenne_gains,
-                   AVG(argent_total_perdu) AS moyenne_pertes,
-                   AVG(level) AS moyenne_level
-            FROM utilisateurs WHERE pseudo = ?
-        ''', (name_user,))
+        cursor.execute("SELECT parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, level, gain_max FROM utilisateurs WHERE pseudo = ?", (name_user,))
         stats = cursor.fetchone()
-        
+
         if stats:
-            parties_jouees, victoires, defaites, argent_gagne, argent_perdu, meilleur_gain, pire_perte, moyenne_gains, moyenne_pertes, moyenne_level = stats
-            
+            parties_jouees, victoires, defaites, argent_gagne, argent_perdu, level, argent_total_gagne, argent_total_perdu, gain_max  = stats
             print(f"\033[36mStatistiques de {name_user} :\033[0m")
+            print(f"\033[36mVos meilleures statistiques : ")
+            print(f"\033[36Level le plus élevé atteint est :  {level}")
             
-            # Meilleures statistiques
-            print(f"\033[34m--- Meilleures Statistiques ---\033[0m")
-            print(f"\033[34mLevel le plus élevé atteint : {moyenne_level:.2f}\033[0m")
-            print(f"\033[34mMeilleur gain obtenu : {meilleur_gain} €\033[0m")
+            print(f"\033[34mArgent total gagné : {argent_total_gagne} €\033[0m")
+            print(f"\033[34mArgent total perdu : {argent_total_perdu} €\033[0m")
             
-            # Pires statistiques
-            print(f"\033[34m--- Pires Statistiques ---\033[0m")
-            print(f"\033[34mPire mise perdue : {pire_perte} €\033[0m")
-            print(f"\033[34mNombre de défaites : {defaites}\033[0m")
-            
-            # Statistiques moyennes
-            print(f"\033[34m--- Moyennes ---\033[0m")
-            print(f"\033[34mMise moyenne : {moyenne_gains:.2f} €\033[0m")
-            print(f"\033[34mNombre moyen de tentatives pour trouver le bon nombre : {moyenne_level:.2f}\033[0m")
+            print(f"\033[34mParties jouées : {parties_jouees}\033[0m")
+            print(f"\033[34mVictoires : {victoires}\033[0m")                        
+            print(f"\033[34mDéfaites : {defaites}\033[0m")
+
+            print(f"\033[34mPlus grosse mise : {miseG} €\033[0m")
+            print(f"\033[34mPlus gros gain : {gain_max} €\033[0m")
         else:
             print(f"\033[31mAucune statistique trouvée pour {name_user}.\033[0m")
     except Exception as e:
-        print(f"Erreur lors de l'affichage des statistiques : {e}")
+        print(f"Erreur lors de l'affichage des statistiques : {e}")          
 
 
+
+
+
+
+
+	# \t\t- Vos meilleures statistiques :  ok
+	# \t\t\t- Level le plus élevé atteint est "level",\n ok
+	# \t\t\t- Vous avez réussi à trouver le bon nombre dès le 1è coup "f" fois.\n
+	# \t\t\t- Le gain le plus elevé est                 pas le bonne var   -> argent_total_gagne           c'est pas le totale ca veut dire la partie ou tu as gagner le plus    il faut faire un algo qui enregistre une variable grosgain et qui n'est changer que si le gain est plus gros
+	# \t\t\t- La mise la plus elevé est                  pas la bonne var  -> la ou tu as mier le pu d'rgntsans forcement recuperer largent   genre si j'ai 129 et je mise 100  puis 29 la plus grosse c'est 100 mais si je gagne que a 29 et son double alors c'est 29*2 mon plus gros gain
+	# \t\t\t- ...
+    
+	# \t\t- Vos pires statistiques : 
+	# \t\t\t- ...
+    
+# on les garde en memoire ou osef on reinitialise a chaque partie ? on peut peut etre essayer de le stocké en bdd 
+
+
+
+miseG= 0
 TEMPS_MAX = 10       
 level = 1
 afficher_regles()
@@ -180,6 +195,8 @@ while True:
                 print("\033[31mLe montant saisi n'est pas valide. Entrer SVP un montant entre 1 et 10 € :\033[0m")
             else:
                 print(f"\033[36mVous avez misé {mise}.\033[0m")
+                if mise > miseG :
+                    miseG = mise                                                                                                                             #modif ici
                 break
         except ValueError:
             print("\033[31mLe montant saisi n'est pas valide. Entrer SVP un montant entre 1 et 10 € :\033[0m")
@@ -226,6 +243,8 @@ while True:
             gain = mise * 2 if nb_coup == 1 else mise
             solde += gain - mise
             print(f"\033[32mBingo {name_user}, vous avez gagné en {nb_coup} coup(s) et vous avez emporté {gain} € !\033[0m")
+            # if gain > gainG
+            #     gaingG = gain                                                                                                                                     #modif ici
             level += 1
             dernier_level = level
             enregistrer_score(name_user, level, dernier_level, solde)
@@ -264,5 +283,5 @@ while True:
         afficher_stats = input("\033[36mSouhaitez-vous consulter vos statistiques (O/N) ?\033[0m \n").strip().lower()
         if afficher_stats == 'o':
             afficher_statistiques(name_user)
-    # Fin de la boucle principale du jeu
     print("\033[36mMerci d'avoir joué ! À la prochaine fois !\033[0m")
+

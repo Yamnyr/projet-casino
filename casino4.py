@@ -12,7 +12,6 @@ except Exception as e:
 
 cursor = conn.cursor()
 
-# Création de la table si elle n'existe pas déjà
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS utilisateurs (
         pseudo TEXT PRIMARY KEY,
@@ -23,7 +22,9 @@ cursor.execute('''
         victoires INTEGER DEFAULT 0,
         defaites INTEGER DEFAULT 0,
         argent_total_gagne INTEGER DEFAULT 0,
-        argent_total_perdu INTEGER DEFAULT 0
+        argent_total_perdu INTEGER DEFAULT 0,
+        gain_max INTEGER DEFAULT 0,
+        mise_max INTEGER DEFAULT 0
     )
 ''')
 conn.commit()
@@ -50,26 +51,28 @@ def enregistrer_score(name_user, level, dernier_level, solde):
         conn.commit()
     except Exception as e:
         print(f"Erreur lors de l'enregistrement du score : {e}")
-        
 
 def mise_a_jour_statistiques(name_user, victoire, gain, perte):
     try:
         # Récupération des statistiques actuelles
-        cursor.execute("SELECT parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu FROM utilisateurs WHERE pseudo = ?", (name_user,))
+        cursor.execute("SELECT parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, gain_max, mise_max FROM utilisateurs WHERE pseudo = ?", (name_user,))
         stats = cursor.fetchone()
 
         if stats:
-            parties_jouees = stats[0] + 1
-            victoires = stats[1] + 1 if victoire else stats[1]
-            defaites = stats[2] + 1 if not victoire else stats[2]
-            argent_total_gagne = stats[3] + gain
-            argent_total_perdu = stats[4] + perte
+            parties_jouees = stats[0] + 1  # Incrémente le nombre de parties jouées
+            victoires = stats[1] + 1 if victoire else stats[1]  # Incrémente les victoires si victoire
+            defaites = stats[2] + 1 if not victoire else stats[2]  # Incrémente les défaites si défaite
+            argent_total_gagne = stats[3] + gain  # Ajoute le gain au total
+            argent_total_perdu = stats[4] + perte  # Ajoute la perte au total
+
+            gain_max = max(stats[5], gain)  # Nouveau gain max
+            mise_max = max(stats[6], miseG)  # Nouvelle mise max
 
             cursor.execute('''
                 UPDATE utilisateurs
-                SET parties_jouees = ?, victoires = ?, defaites = ?, argent_total_gagne = ?, argent_total_perdu = ?
+                SET parties_jouees = ?, victoires = ?, defaites = ?, argent_total_gagne = ?, argent_total_perdu = ?, gain_max = ?, mise_max = ?
                 WHERE pseudo = ?
-            ''', (parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, name_user))
+            ''', (parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, gain_max, mise_max, name_user))
         conn.commit()
     except Exception as e:
         print(f"Erreur lors de la mise à jour des statistiques : {e}")
@@ -99,42 +102,28 @@ def demande_saisie():
 
 def afficher_statistiques(name_user):
     try:
-        cursor.execute('''
-            SELECT parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu,
-                   MAX(argent_total_gagne) AS meilleur_gain,
-                   MAX(argent_total_perdu) AS pire_perte,
-                   AVG(argent_total_gagne) AS moyenne_gains,
-                   AVG(argent_total_perdu) AS moyenne_pertes,
-                   AVG(level) AS moyenne_level
-            FROM utilisateurs WHERE pseudo = ?
-        ''', (name_user,))
+        cursor.execute("SELECT parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, level, gain_max, mise_max FROM utilisateurs WHERE pseudo = ?", (name_user,))
         stats = cursor.fetchone()
-        
+
         if stats:
-            parties_jouees, victoires, defaites, argent_gagne, argent_perdu, meilleur_gain, pire_perte, moyenne_gains, moyenne_pertes, moyenne_level = stats
-            
+            parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, level, gain_max, mise_max  = stats
             print(f"\033[36mStatistiques de {name_user} :\033[0m")
-            
-            # Meilleures statistiques
-            print(f"\033[34m--- Meilleures Statistiques ---\033[0m")
-            print(f"\033[34mLevel le plus élevé atteint : {moyenne_level:.2f}\033[0m")
-            print(f"\033[34mMeilleur gain obtenu : {meilleur_gain} €\033[0m")
-            
-            # Pires statistiques
-            print(f"\033[34m--- Pires Statistiques ---\033[0m")
-            print(f"\033[34mPire mise perdue : {pire_perte} €\033[0m")
-            print(f"\033[34mNombre de défaites : {defaites}\033[0m")
-            
-            # Statistiques moyennes
-            print(f"\033[34m--- Moyennes ---\033[0m")
-            print(f"\033[34mMise moyenne : {moyenne_gains:.2f} €\033[0m")
-            print(f"\033[34mNombre moyen de tentatives pour trouver le bon nombre : {moyenne_level:.2f}\033[0m")
+            print(f"\033[36mVos meilleures statistiques :")
+            print(f"\033[34m- Level le plus élevé atteint : {level}\033[0m")
+            print(f"\033[34m- Argent total gagné : {argent_total_gagne} €\033[0m")
+            print(f"\033[34m- Argent total perdu : {argent_total_perdu} €\033[0m")
+            print(f"\033[34m- Parties jouées : {parties_jouees}\033[0m")
+            print(f"\033[34m- Victoires : {victoires}\033[0m")                        
+            print(f"\033[34m- Défaites : {defaites}\033[0m")
+            print(f"\033[34m- Plus grosse mise : {mise_max} €\033[0m")
+            print(f"\033[34m- Plus gros gain : {gain_max} €\033[0m")
         else:
             print(f"\033[31mAucune statistique trouvée pour {name_user}.\033[0m")
     except Exception as e:
         print(f"Erreur lors de l'affichage des statistiques : {e}")
 
 
+miseG= 0
 TEMPS_MAX = 10       
 level = 1
 afficher_regles()
@@ -180,6 +169,8 @@ while True:
                 print("\033[31mLe montant saisi n'est pas valide. Entrer SVP un montant entre 1 et 10 € :\033[0m")
             else:
                 print(f"\033[36mVous avez misé {mise}.\033[0m")
+                if mise > miseG :
+                    miseG = mise                                                                                                                             #modif ici
                 break
         except ValueError:
             print("\033[31mLe montant saisi n'est pas valide. Entrer SVP un montant entre 1 et 10 € :\033[0m")
@@ -225,7 +216,7 @@ while True:
         else:
             gain = mise * 2 if nb_coup == 1 else mise
             solde += gain - mise
-            print(f"\033[32mBingo {name_user}, vous avez gagné en {nb_coup} coup(s) et vous avez emporté {gain} € !\033[0m")
+            print(f"\033[32mBingo {name_user}, vous avez gagné en {nb_coup} coup(s) et vous avez emporté {gain} € !\033[0m")                                                                                                                                    #modif ici
             level += 1
             dernier_level = level
             enregistrer_score(name_user, level, dernier_level, solde)
@@ -238,7 +229,9 @@ while True:
         enregistrer_score(name_user, level, dernier_level, solde)
         mise_a_jour_statistiques(name_user, victoire=False, gain=0, perte=mise)  # Défaite, perte enregistrée
 
-
+    afficher_stats = input("\033[36mSouhaitez-vous consulter vos statistiques (O/N) ?\033[0m \n").strip().lower()
+    if afficher_stats == 'o':
+        afficher_statistiques(name_user)
     continuer = input("\033[36mSouhaitez-vous continuer la partie (O/N) ?\033[0m \n").strip().lower()
     if continuer != 'o':
         print(f"\033[32mAu revoir ! Vous finissez la partie avec {solde} €.\033[0m")
@@ -261,8 +254,7 @@ while True:
                 print(f"\033[32mAu revoir {name_user} ! Vous finissez la partie avec {solde} €.\033[0m")
                 
                 break
-        afficher_stats = input("\033[36mSouhaitez-vous consulter vos statistiques (O/N) ?\033[0m \n").strip().lower()
-        if afficher_stats == 'o':
-            afficher_statistiques(name_user)
-    # Fin de la boucle principale du jeu
+       
     print("\033[36mMerci d'avoir joué ! À la prochaine fois !\033[0m")
+
+
