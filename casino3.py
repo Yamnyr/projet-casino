@@ -5,7 +5,7 @@ import threading
 
 # Connexion à la base de données SQLite
 try:
-    conn = sqlite3.connect('levels8.db')
+    conn = sqlite3.connect('scores.db')
     print("Connexion à la base de données réussie.")
 except Exception as e:
     print(f"Erreur de connexion à la base de données : {e}")
@@ -34,70 +34,74 @@ def enregistrer_score(name, level, dernier_level, argent):
             if level > ancien_level:
                 cursor.execute("UPDATE utilisateurs SET level = ?, dernier_level = ?, argent = ? WHERE pseudo = ?",
                                 (level, dernier_level, argent, name))
-                print(f"Félicitations {name}, votre niveau a été mis à jour à {level} !")
+                print(f"\033[32mFélicitations {name}, votre niveau a été mis à jour à {level} !\033[0m")
             else:
                 cursor.execute("UPDATE utilisateurs SET dernier_level = ?, argent = ? WHERE pseudo = ?",
-                               (dernier_level, argent, name))  # Fix: argent argument should be before name
-                print(f"{name}, votre niveau actuel est inférieur à votre meilleur niveau ({ancien_level}).")
+                               (dernier_level, argent, name))
+                print(f"\033[33m{name}, votre niveau actuel est inférieur à votre meilleur niveau ({ancien_level}).\033[0m")
         else:
             # Insertion d'un nouvel utilisateur avec le niveau actuel et dernier niveau
             cursor.execute("INSERT INTO utilisateurs (pseudo, level, dernier_level, argent) VALUES (?, ?, ?, ?)",
                            (name, level, dernier_level, argent))
-            print(f"Niveau de {name} enregistré à {level}.")
+            print(f"\033[32mNiveau de {name} enregistré à {level}.\033[0m")
 
         conn.commit()
     except Exception as e:
         print(f"Erreur lors de l'enregistrement du score : {e}")
         
 
+def demande_saisie():
+    global nb_user
+    try:
+        nb_user = int(input("Entrez un nombre (en 10 secondes max) : \n"))
+    except ValueError:
+        print("Entrée invalide. Veuillez entrer un nombre.")
+        nb_user = None  
+
 TEMPS_MAX = 10       
 level = 1
-name = input('Je suis Python. Quel est votre pseudo ? \n')
+name = input('\033[36mJe suis Python. Quel est votre pseudo ?\033[0m \n')
 # Récupération du dernier niveau joué (dernier_level) si l'utilisateur existe
 cursor.execute("SELECT dernier_level, argent FROM utilisateurs WHERE pseudo = ?", (name,))
 result = cursor.fetchone()
 
 if result:
-    # Si l'utilisateur existe, on récupère le dernier_level
     dernier_level = result[0]
     argent = result[1]
     level = dernier_level  # On fixe le niveau actuel au dernier joué
-    print(f"Re-bienvenue {name} ! Vous recommencez à votre dernier niveau : {level}")
+    print(f"\033[36mRe-bienvenue {name} ! Vous recommencez à votre dernier niveau : {level}.\033[0m")
 else:
-    dernier_level = 1  # Si c'est un nouvel utilisateur, on commence au niveau 1
-    argent = int(input("Quel montant voulez-vous déposer ? \n"))
+    dernier_level = 1
+    argent = int(input("\033[36mQuel montant voulez-vous déposer ?\033[0m \n"))
     enregistrer_score(name, level, dernier_level, argent)
-
 
 while True:
     if level > 3:
-        level = int(input(f'{name}, quel niveau voulez vous ? : '))
+        level = int(input(f'{name}, quel niveau voulez-vous ? : '))
     if level < 1:
         level = 1
     nb_essais = 3 + (2 * level - 2)
 
     print('--------------------------------------------------------------------------------')
-    print(f'Vous êtes au niveau : {level}')
+    print(f'\033[35mVous êtes au niveau : {level}\033[0m')
 
     nb_ordi = randrange(1, level * 10 + 1)
     while True:
         try:
-            mise = int(input(f"Quel montant voulez-vous miser ? \nVous avez {argent} € sur votre compte : \n"))
+            mise = int(input(f"\033[36mQuel montant voulez-vous miser ? \nVous avez {argent} € sur votre compte :\033[0m \n"))
             
             if mise > argent:
-                print(f"Vous ne pouvez pas miser plus que {argent}. Veuillez réessayer.")
+                print(f"\033[31mVous ne pouvez pas miser plus que {argent}. Veuillez réessayer.\033[0m")
             elif mise <= 0:
-                print("La mise doit être un montant positif. Veuillez réessayer.")
+                print("\033[31mLa mise doit être un montant positif. Veuillez réessayer.\033[0m")
             else:
-                print(f"Vous avez misé {mise}.")
+                print(f"\033[36mVous avez misé {mise}.\033[0m")
                 break
         except ValueError:
-            print("Entrée invalide. Veuillez entrer un nombre entier.")
+            print("\033[31mEntrée invalide. Veuillez entrer un nombre entier.\033[0m")
 
-    print(f'\t- Je viens de penser à un nombre entre 1 et {level * 10}. Devinez lequel ?')
-    print(nb_ordi)
-    
-    print(f'\t- Vous avez {nb_essais} essais.')
+    print(f'\t- \033[36mJe viens de penser à un nombre entre 1 et {level * 10}. Devinez lequel ?\033[0m')
+    print(f'\t- \033[36mVous avez {nb_essais} essais.\033[0m')
 
     nb_coup = 0
 
@@ -105,17 +109,7 @@ while True:
 
         reste = nb_essais - nb_coup
 
-        print(f'\t- Il vous reste {reste} essai(s)')
-        
-        def demande_saisie():
-            global nb_user
-
-            try:
-                nb_user = int(input("Entrez un nombre (en 10 secondes max) : \n"))
-
-            except ValueError:
-                print("Entrée invalide. Veuillez entrer un nombre.")
-                nb_user = None  
+        print(f'\t- \033[36mIl vous reste {reste} essai(s)\033[0m')
         
         debut_essai = time.time()
         nb_user = None
@@ -124,11 +118,9 @@ while True:
         thread_saisie.start()
 
         while thread_saisie.is_alive():
-            
             if time.time() - debut_essai > TEMPS_MAX:
                 nb_essais -= 1
-                print(f"Vous avez dépassé le délai de {TEMPS_MAX} secondes ! Vous perdez l'essai courant et il vous reste {nb_essais} essai(s) !")
-                print('Essai suivant')
+                print(f"\033[31mVous avez dépassé le délai de {TEMPS_MAX} secondes ! Vous perdez l'essai courant, il vous reste {nb_essais} essai(s) !\033[0m")
                 thread_saisie.join()
                 break
 
@@ -140,35 +132,33 @@ while True:
         nb_coup += 1
 
         if nb_user > nb_ordi:
-            print('Votre nombre est trop grand')
-            
+            print(f'\033[33mVotre nombre est trop grand.\033[0m')
         elif nb_user < nb_ordi:
-            print('Votre nombre est trop petit')
-            
+            print(f'\033[33mVotre nombre est trop petit.\033[0m')
         else:
-            print(f"Bingo ! Vous avez gagné en {nb_coup} coup(s) !")
+            print(f"\033[32mBingo {name}, vous avez gagné en {nb_coup} coup(s) !\033[0m")
             
             if nb_coup == 1:
                 gains = mise * 2
-                print(f"Félicitations ! Vous avez deviné du premier coup ! Vous gagnez le double de votre mise : {gains} €")
+                print(f"\033[32mFélicitations ! Vous gagnez le double de votre mise : {gains} €.\033[0m")
             elif nb_coup <= 2 * level:
                 gains = mise
-                print(f"Bravo ! Vous avez deviné au {nb_coup}ème coup. Vous gagnez exactement votre mise : {gains} €")
+                print(f"\033[32mBravo ! Vous gagnez exactement votre mise : {gains} €.\033[0m")
             else:
                 gains = 0
-                print(f"Vous avez deviné, mais pas dans le nombre optimal de coups. Vous ne gagnez rien cette fois.")
+                print(f"\033[33mVous avez deviné, mais pas dans le nombre optimal de coups. Vous ne gagnez rien cette fois.\033[0m")
             
-            # Update argent with gains and deduct the initial mise
             argent += (gains - mise)
-            
             level += 1
             dernier_level = level
             enregistrer_score(name, level, dernier_level, argent)
-            
             break
     else:
-        print("Vous n'avez plus d'essais.")
-        argent -= mise  # If the player loses, they lose their bet
+        print(f"\033[31mVous avez perdu ! Mon nombre était {nb_ordi} !\033[0m")
+        argent -= mise
         enregistrer_score(name, level, dernier_level, argent)
-        
-    print(f"Le nombre était : {nb_ordi}")
+
+    continuer = input("\033[36mSouhaitez-vous continuer la partie (O/N) ?\033[0m \n").strip().lower()
+    if continuer != 'o':
+        print(f"\033[32mAu revoir {name}! Vous finissez la partie avec {argent} €.\033[0m")
+        break
