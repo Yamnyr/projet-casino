@@ -5,7 +5,7 @@ import threading
 
 # Connexion à la base de données SQLite
 try:
-    conn = sqlite3.connect('levels6.db')
+    conn = sqlite3.connect('levels7.db')
     print("Connexion à la base de données réussie.")
 except Exception as e:
     print(f"Erreur de connexion à la base de données : {e}")
@@ -23,7 +23,7 @@ cursor.execute('''
 ''')
 conn.commit()
 
-def enregistrer_score(name, level, dernier_level):
+def enregistrer_score(name, level, dernier_level, argent):
     try:
         cursor.execute("SELECT * FROM utilisateurs WHERE pseudo = ?", (name,))
         result = cursor.fetchone()
@@ -41,8 +41,8 @@ def enregistrer_score(name, level, dernier_level):
                 print(f"{name}, votre niveau actuel est inférieur à votre meilleur niveau ({ancien_level}).")
         else:
             # Insertion d'un nouvel utilisateur avec le niveau actuel et dernier niveau
-            cursor.execute("INSERT INTO utilisateurs (pseudo, level, dernier_level) VALUES (?, ?, ?)",
-                           (name, level, dernier_level))
+            cursor.execute("INSERT INTO utilisateurs (pseudo, level, dernier_level, argent) VALUES (?, ?, ?, ?)",
+                           (name, level, dernier_level, argent))
             print(f"Niveau de {name} enregistré à {level}.")
 
         conn.commit()
@@ -54,17 +54,21 @@ TEMPS_MAX=10
 level = 1
 name = input('Je suis Python. Quel est votre pseudo ? \n')
 # Récupération du dernier niveau joué (dernier_level) si l'utilisateur existe
-cursor.execute("SELECT dernier_level FROM utilisateurs WHERE pseudo = ?", (name,))
+cursor.execute("SELECT dernier_level, argent FROM utilisateurs WHERE pseudo = ?", (name,))
 result = cursor.fetchone()
 
 if result:
     # Si l'utilisateur existe, on récupère le dernier_level
     dernier_level = result[0]
+    argent = result[1]
     level = dernier_level  # On fixe le niveau actuel au dernier joué
     print(f"Re-bienvenue {name} ! Vous recommencez à votre dernier niveau : {level}")
 else:
     dernier_level = 1  # Si c'est un nouvel utilisateur, on commence au niveau 1
-    enregistrer_score(name, level, dernier_level)
+    
+    argent = int(input("quel montant voulez vous deposer : \n"))
+    enregistrer_score(name, level, dernier_level, argent)
+
 
 while True:
         
@@ -79,9 +83,12 @@ while True:
 
         nb_ordi = randrange(1, level * 10 + 1)
 
+        mise = int(input("quel montant voulez vous miser : \n"))
         print(f'\t- Je viens de penser à un nombre entre 1 et {level * 10}. Devinez lequel ?')
+        print(nb_ordi)
         
-        
+        print(f'\t- Vous avez {nb_essais} essais.')
+
         nb_coup = 0
 
         while nb_coup < nb_essais:
@@ -94,7 +101,7 @@ while True:
                 global nb_user
 
                 try:
-                    nb_user = int(input("Entrez un nombre ! (Vous avez 10 secondes max) : \n"))
+                    nb_user = int(input("Entrez un nombre (en 10 secondes max) : \n"))
 
                 except ValueError:
                     print("Entrée invalide. Veuillez entrer un nombre.")
@@ -112,7 +119,7 @@ while True:
                 if time.time() - debut_essai > TEMPS_MAX:
                     nb_essais-=1
                     print(f"Vous avez dépassé le délai de {TEMPS_MAX} secondes ! Vous perdez l'essai courant et il vous reste {nb_essais} essai(s) !")
-                    print('Entrez un nombre !\n')
+                    print('essaie suivant')
                     thread_saisie.join()
                     break
 
@@ -141,7 +148,3 @@ while True:
             level-=level
         print(f"Le nombre était : {nb_ordi}")
         
-
-
-
-        if nb_essais
