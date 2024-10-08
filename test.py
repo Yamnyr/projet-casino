@@ -144,4 +144,12 @@ while True:
 
 
 
-        if nb_essais
+        if nb_essais > 20 : 
+            doubleG = 5 #0-5 tu double
+            NormalG = 10#5-10 mise normal et plus de 10 tu perds ta mise
+        if nb_essais <=20 :
+            doubleG = 1#0-1 tu double
+            NormalG = 2#2 tu recup ta mise et plus de 2 tu perds
+
+
+            
