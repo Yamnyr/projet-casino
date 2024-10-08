@@ -107,13 +107,8 @@ def afficher_statistiques(name_user):
 
         if stats:
             parties_jouees, victoires, defaites, argent_total_gagne, argent_total_perdu, level, gain_max, mise_max  = stats
-<<<<<<< HEAD
             print(f"\033[36m--------------------------------------------------------------------------------\033[0m")
             print(f"\033[34mVos meilleures statistiques :")
-=======
-            print(f"\033[36mStatistiques de {name_user} :\033[0m")
-            print(f"\033[36mVos meilleures statistiques :")
->>>>>>> 4255628e0254188f63c76beb31a6fa5947edfbd4
             print(f"\033[34m- Level le plus élevé atteint : {level}\033[0m")
             print(f"\033[34m- Argent total gagné : {argent_total_gagne} €\033[0m")
             print(f"\033[34m- Argent total perdu : {argent_total_perdu} €\033[0m")
